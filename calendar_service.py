@@ -1,31 +1,29 @@
+import json
+import os
+from datetime import datetime, timezone
+from anthropic import Anthropic
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from datetime import datetime, timezone
-import os
-from anthropic import Anthropic
 from config import COLLECTION, get_context
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 client = Anthropic()
 
 def get_calendar_service():
-    credentials_path = os.getenv(
-        "GOOGLE_CREDENTIALS_PATH", "documentos/credentials-google-calendar.json"
-    )
-    credentials = service_account.Credentials.from_service_account_file(
-        credentials_path, scopes=SCOPES
-    )
+    credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if credentials_json:
+        info = json.loads(credentials_json)
+        credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "documentos/credentials-google-calendar.json")
+        credentials = service_account.Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
     return build("calendar", "v3", credentials=credentials)
 
 def normalize_cabin_name(name: str) -> str:
     return name.lower().strip()
 
 def get_all_cabins() -> list:
-    context = get_context(
-        COLLECTION,
-        "nombres de todas las cabañas refugios suites chalets tarifa",
-        n_answer=10
-    )
+    context = get_context(COLLECTION, "nombres de todas las cabañas refugios suites chalets tarifa", n_answer=10)
     response = client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=300,
